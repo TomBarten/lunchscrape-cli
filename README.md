@@ -6,4 +6,5 @@ Hobby project which can scrape 'shop' data from food-related sites.
 - [ ] Scrape multiple statically configured pages
 - [ ] Make scraping configurable through variables
 - [ ] Make scraping configurable through command line arguments
-- [ ] Make scraping data outputted as JSON
+- [x] Make scraping data outputted as JSON
+    - Outputted in the `out` folder as `menu.json` 

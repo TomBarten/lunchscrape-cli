@@ -19,3 +19,6 @@
 
 # Go workspace file
 go.work
+
+# Lunchscape menu.json output
+out/*.json
