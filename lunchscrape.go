@@ -16,22 +16,30 @@ type currency struct {
     Value          float64 `json:"value"`
 }
 
+type itemOption struct {
+    Name       string   `json:"name"`
+    Price      currency `json:"price"`
+    IsOptional bool     `json:"optional"`
+}
+
 type item struct {
-    Name        string `json:"name"`
-    Price       currency
-    Description string `json:"description"`
-    ImgUrl      string `json:"imgurl"`
+    Name        string       `json:"name"`
+    Price       currency     `json:"price"`
+    Description string       `json:"description"`
+    ImgUrl      string       `json:"img-url"`
+    Options     []itemOption `json:"options"`
 }
 
 func main() {
 
-    dirPath := "./out"
+    menuOutputFileName := "menu.json"
+    menuOutputPath := "./out"
 
-    if outputDirError := os.MkdirAll(dirPath, 0755); outputDirError != nil {
+    if outputDirError := os.MkdirAll(menuOutputPath, 0755); outputDirError != nil {
         fmt.Println("Error creating directory:", outputDirError)
     }
 
-    if outputDirError := os.Chdir(dirPath); outputDirError != nil {
+    if outputDirError := os.Chdir(menuOutputPath); outputDirError != nil {
         fmt.Println("Error changing working directory:", outputDirError)
         return
     }
@@ -44,12 +52,13 @@ func main() {
 
     extensions.RandomUserAgent(collector)
 
-    items := make([]item, 0, 500)
+    items := make([]item, 0, 100)
 
     collector.OnHTML("a.collection-item[href^='/c/']", navigate)
+    collector.OnHTML("a.product-item[href^='/c/'][href*='/p/']", navigate)
 
-    collector.OnHTML("a[class=product-item]", func(element *colly.HTMLElement) {
-        collectProductItems(&items, element)
+    collector.OnHTML("div.product-page.product-body", func(element *colly.HTMLElement) {
+        collectProductItem(&items, element)
     })
 
     collector.OnRequest(func(request *colly.Request) {
@@ -65,9 +74,7 @@ func main() {
         return
     }
 
-    jsonFileError := os.WriteFile("menu.json", jsonData, 0644)
-
-    if jsonFileError != nil {
+    if jsonFileError := os.WriteFile(menuOutputFileName, jsonData, 0644); jsonFileError != nil {
         fmt.Println("Error writing to file:", jsonFileError)
         return
     }
@@ -79,15 +86,17 @@ func navigate(element *colly.HTMLElement) {
     element.Request.Visit(link)
 }
 
-func collectProductItemOptions(element *colly.HTMLElement) {
-    navigate(element)
+func collectProductItemOptions(element *colly.HTMLElement) []itemOption {
+
+    // TODO implement
+    return make([]itemOption, 0)
 }
 
-func collectProductItems(items *[]item, element *colly.HTMLElement) {
+func collectProductItem(items *[]item, element *colly.HTMLElement) {
 
-    collectProductItemOptions(element)
+    options := collectProductItemOptions(element)
 
-    rawItemPrice := element.ChildText("div.product-item-body div.product-item-offer span.product-item-price")
+    rawItemPrice := element.ChildText("form#product-form fieldset.product-offer div.product-price-measurement div.product-price")
 
     itemPriceParts := strings.Fields(rawItemPrice)
 
@@ -108,12 +117,14 @@ func collectProductItems(items *[]item, element *colly.HTMLElement) {
     }
 
     item := item{
-        Name:        element.ChildText("div.product-item-body div[class=product-item-title]"),
-        Description: element.ChildText("div.product-item-body div[class=product-item-description]"),
+        Name:        element.ChildText("div.product-section.product-intro h1"),
+        Description: element.ChildText("div.product-section.product-intro p"),
+        ImgUrl:      element.ChildAttr("div.product-image-default img", "src"),
         Price: currency{
             CurrencySymbol: currencySymbol,
             Value:          itemPrice,
         },
+        Options: options,
     }
 
     *items = append(*items, item)
