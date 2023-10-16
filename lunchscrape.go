@@ -28,6 +28,10 @@ func main() {
         colly.AllowedDomains(baseDomain),
     )
 
+    collector.OnHTML("a.collection-item[href^='/c/']", func(h *colly.HTMLElement) {
+
+    })
+
     collector.OnHTML("a[class=product-item]", collectProductItems)
 
     collector.OnRequest(func(request *colly.Request) {

@@ -1,6 +1,6 @@
 {
     "go.alternateTools": {},
-    "go.formatTool": "gofmt",
+    "go.formatTool": "goformat",
     "[go]": {
       "editor.insertSpaces": true,
       "editor.formatOnSave": true
