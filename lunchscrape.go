@@ -18,14 +18,16 @@ type currency struct {
 }
 
 type itemOption struct {
+    Id                  string   `json:"id"`
     Name                string   `json:"name"`
     Price               currency `json:"price"`
-    GroupId             int      `json:"option-group-id"`
+    GroupId             string   `json:"option-group-id"`
     IsOptional          bool     `json:"optional"`
     IsMutuallyExclusive bool     `json:"mutually-exclusive"`
 }
 
 type item struct {
+    Slug        string       `json:"slug"`
     Name        string       `json:"name"`
     Price       currency     `json:"price"`
     Description string       `json:"description"`
@@ -105,16 +107,32 @@ func collectItemOptions(element *colly.HTMLElement, currencySymbol string) *[]it
             isOptional = true
         }
 
-        handleOptionsGroup(groupIteration+1, &options, optionGroupSelection, currencySymbol, isOptional)
+        error := handleOptionsGroup(&options, optionGroupSelection, currencySymbol, isOptional)
+
+        if error != nil {
+            fmt.Println(error)
+        }
     })
 
     return &options
 }
 
-func handleOptionsGroup(groupId int, options *[]itemOption, optionGroupSelection *goquery.Selection, currencySymbol string, isOptional bool) {
+func handleOptionsGroup(options *[]itemOption, optionGroupSelection *goquery.Selection, currencySymbol string, isOptional bool) error {
 
     optionElements := optionGroupSelection.Find(
         "div.product-option-group-options.form-checks div.product-option.form-check")
+
+    optionGroupIdInputs := optionGroupSelection.ChildrenFiltered(":input[id$=\"__Id\"]")
+
+    if len(optionGroupIdInputs.Nodes) <= 0 {
+        return fmt.Errorf("cannot find option group identifier element")
+    }
+
+    groupId := optionGroupIdInputs.First().AttrOr("value", "")
+
+    if len(groupId) <= 0 {
+        return fmt.Errorf("option group identifier is empty")
+    }
 
     optionElements.Each(func(i int, optionSelection *goquery.Selection) {
 
@@ -128,10 +146,12 @@ func handleOptionsGroup(groupId int, options *[]itemOption, optionGroupSelection
 
         *options = append(*options, *option)
     })
+
+    return nil
 }
 
 func constructItemOption(
-    groupId int,
+    groupId string,
     isOptional bool,
     currencySymbol string,
     optionSelection *goquery.Selection) (*itemOption, error) {
@@ -211,6 +231,7 @@ func collectProductItem(items *[]item, element *colly.HTMLElement) {
     options := collectItemOptions(element, currencySymbol)
 
     item := item{
+        Slug:        element.ChildAttr("div.dialog-body.product-body input#Editor_Slug", "value"),
         Name:        element.ChildText("div.product-section.product-intro h1"),
         Description: element.ChildText("div.product-section.product-intro p"),
         ImgUrl:      element.ChildAttr("div.product-image-default img", "src"),
