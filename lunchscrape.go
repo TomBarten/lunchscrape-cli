@@ -18,9 +18,11 @@ type currency struct {
 }
 
 type itemOption struct {
-    Name       string   `json:"name"`
-    Price      currency `json:"price"`
-    IsOptional bool     `json:"optional"`
+    Name                string   `json:"name"`
+    Price               currency `json:"price"`
+    GroupId             int      `json:"option-group-id"`
+    IsOptional          bool     `json:"optional"`
+    IsMutuallyExclusive bool     `json:"mutually-exclusive"`
 }
 
 type item struct {
@@ -87,47 +89,112 @@ func navigate(element *colly.HTMLElement) {
     element.Request.Visit(link)
 }
 
-func collectProductItemOptions(element *colly.HTMLElement) []itemOption {
+func collectItemOptions(element *colly.HTMLElement, currencySymbol string) []itemOption {
 
-    optionGroups := element.DOM.ChildrenFiltered("fieldset.product-option-group")
+    // "form#product-form div.product-section.product-section-input fieldset.product-option-group"
+    optionGroups := element.DOM.Find("form#product-form div.product-section.product-section-input fieldset.product-option-group")
 
     options := make([]itemOption, 0, 20)
 
-    optionGroups.Each(func(i int, selection *goquery.Selection) {
+    optionGroups.Each(func(groupIteration int, optionGroupSelection *goquery.Selection) {
 
-        requiredOption := false
+        isOptional := false
 
-        if selection.Find("input[data-val-required]") != nil {
-            requiredOption = true
+        optionalSpan := optionGroupSelection.Find("legend span.badge.control-optional")
+
+        if optionalSpan != nil && len(optionalSpan.Nodes) > 0 {
+            isOptional = true
         }
 
-        option := collectProductItemOption(selection, requiredOption)
-
-        options = append(options, option)
+        handleOptionsGroup(groupIteration+1, &options, optionGroupSelection, currencySymbol, isOptional)
     })
 
     return options
 }
 
-func collectProductItemOption(selection *goquery.Selection, requiredOption bool) itemOption {
+func handleOptionsGroup(groupId int, options *[]itemOption, optionGroupSelection *goquery.Selection, currencySymbol string, isOptional bool) {
 
-    // TODO implement
+    optionElements := optionGroupSelection.Find(
+        "div.product-option-group-options.form-checks div.product-option.form-check")
 
-    option := itemOption{}
+    optionElements.Each(func(i int, optionSelection *goquery.Selection) {
 
-    return option
+        option, error := constructItemOption(
+            groupId, isOptional, currencySymbol, optionSelection)
+
+        if error != nil {
+            fmt.Println(error)
+            return
+        }
+
+        *options = append(*options, *option)
+    })
+}
+
+func constructItemOption(
+    groupId int,
+    isOptional bool,
+    currencySymbol string,
+    optionSelection *goquery.Selection) (*itemOption, error) {
+
+    isMutuallyExclusive := true
+
+    checkBoxInput := optionSelection.Find("input[type=checkbox]:not([type=hidden])")
+
+    if checkBoxInput != nil && len(checkBoxInput.Nodes) > 0 {
+        isMutuallyExclusive = false
+    }
+
+    optionLabel := optionSelection.Find("label.form-check-label")
+
+    rawOptionPrice := optionLabel.Find("span.product-option-price").Text()
+
+    var optionPrice float64
+
+    if len(rawOptionPrice) <= 0 {
+        optionPrice = 0
+    } else {
+        optionPriceParts := strings.Fields(rawOptionPrice)
+
+        if len(optionPriceParts) != 3 {
+            return nil, fmt.Errorf("invalid item price format: %s", rawOptionPrice)
+        }
+
+        currencySymbol = optionPriceParts[1]
+
+        optionPriceStr := strings.ReplaceAll(optionPriceParts[2], ",", ".")
+
+        price, conversionError := strconv.ParseFloat(optionPriceStr, 64)
+
+        if conversionError != nil {
+            return nil, conversionError
+        }
+
+        optionPrice = price
+    }
+
+    option := itemOption{
+        GroupId:             groupId,
+        Name:                strings.TrimSpace(optionLabel.Contents().Not("span").Text()),
+        IsOptional:          isOptional,
+        IsMutuallyExclusive: isMutuallyExclusive,
+        Price: currency{
+            Value:          optionPrice,
+            CurrencySymbol: currencySymbol,
+        },
+    }
+
+    return &option, nil
 }
 
 func collectProductItem(items *[]item, element *colly.HTMLElement) {
-
-    options := collectProductItemOptions(element)
 
     rawItemPrice := element.ChildText("form#product-form fieldset.product-offer div.product-price-measurement div.product-price")
 
     itemPriceParts := strings.Fields(rawItemPrice)
 
     if len(itemPriceParts) != 2 {
-        fmt.Printf("Invalid item price format: %s", rawItemPrice)
+        fmt.Printf("invalid item price format: %s", rawItemPrice)
         return
     }
 
@@ -141,6 +208,8 @@ func collectProductItem(items *[]item, element *colly.HTMLElement) {
         fmt.Println(conversionError)
         return
     }
+
+    options := collectItemOptions(element, currencySymbol)
 
     item := item{
         Name:        element.ChildText("div.product-section.product-intro h1"),
