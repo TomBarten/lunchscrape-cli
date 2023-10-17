@@ -7,6 +7,7 @@ import (
     "strconv"
     "strings"
 
+    "github.com/PuerkitoBio/goquery"
     "github.com/gocolly/colly"
     "github.com/gocolly/colly/extensions"
 )
@@ -88,8 +89,33 @@ func navigate(element *colly.HTMLElement) {
 
 func collectProductItemOptions(element *colly.HTMLElement) []itemOption {
 
+    optionGroups := element.DOM.ChildrenFiltered("fieldset.product-option-group")
+
+    options := make([]itemOption, 0, 20)
+
+    optionGroups.Each(func(i int, selection *goquery.Selection) {
+
+        requiredOption := false
+
+        if selection.Find("input[data-val-required]") != nil {
+            requiredOption = true
+        }
+
+        option := collectProductItemOption(selection, requiredOption)
+
+        options = append(options, option)
+    })
+
+    return options
+}
+
+func collectProductItemOption(selection *goquery.Selection, requiredOption bool) itemOption {
+
     // TODO implement
-    return make([]itemOption, 0)
+
+    option := itemOption{}
+
+    return option
 }
 
 func collectProductItem(items *[]item, element *colly.HTMLElement) {
