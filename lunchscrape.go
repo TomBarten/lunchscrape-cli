@@ -55,7 +55,7 @@ func main() {
 
     extensions.RandomUserAgent(collector)
 
-    items := make([]item, 0, 100)
+    items := make([]item, 0, 250)
 
     collector.OnHTML("a.collection-item[href^='/c/']", navigate)
     collector.OnHTML("a.product-item[href^='/c/'][href*='/p/']", navigate)
