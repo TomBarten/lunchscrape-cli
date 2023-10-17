@@ -89,9 +89,8 @@ func navigate(element *colly.HTMLElement) {
     element.Request.Visit(link)
 }
 
-func collectItemOptions(element *colly.HTMLElement, currencySymbol string) []itemOption {
+func collectItemOptions(element *colly.HTMLElement, currencySymbol string) *[]itemOption {
 
-    // "form#product-form div.product-section.product-section-input fieldset.product-option-group"
     optionGroups := element.DOM.Find("form#product-form div.product-section.product-section-input fieldset.product-option-group")
 
     options := make([]itemOption, 0, 20)
@@ -109,7 +108,7 @@ func collectItemOptions(element *colly.HTMLElement, currencySymbol string) []ite
         handleOptionsGroup(groupIteration+1, &options, optionGroupSelection, currencySymbol, isOptional)
     })
 
-    return options
+    return &options
 }
 
 func handleOptionsGroup(groupId int, options *[]itemOption, optionGroupSelection *goquery.Selection, currencySymbol string, isOptional bool) {
@@ -219,7 +218,7 @@ func collectProductItem(items *[]item, element *colly.HTMLElement) {
             CurrencySymbol: currencySymbol,
             Value:          itemPrice,
         },
-        Options: options,
+        Options: *options,
     }
 
     *items = append(*items, item)
