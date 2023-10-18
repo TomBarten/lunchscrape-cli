@@ -20,5 +20,10 @@
 # Go workspace file
 go.work
 
-# Lunchscape menu.json output
+# Lunchscrape output
+
+# menu.json or any other json output
 out/*.json
+
+# Colly cache for site
+out/*_cache

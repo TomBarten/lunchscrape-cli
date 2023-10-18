@@ -26,13 +26,22 @@ type itemOption struct {
     IsMutuallyExclusive bool     `json:"mutually-exclusive"`
 }
 
+type itemAssociation struct {
+    Id         string   `json:"id"`
+    Name       string   `json:"name"`
+    Price      currency `json:"price"`
+    GroupId    string   `json:"option-group-id"`
+    IsOptional bool     `json:"optional"`
+}
+
 type item struct {
-    Slug        string       `json:"slug"`
-    Name        string       `json:"name"`
-    Price       currency     `json:"price"`
-    Description string       `json:"description"`
-    ImgUrl      string       `json:"img-url"`
-    Options     []itemOption `json:"options"`
+    Slug         string            `json:"slug"`
+    Name         string            `json:"name"`
+    Price        currency          `json:"price"`
+    Description  string            `json:"description"`
+    ImgUrl       string            `json:"img-url"`
+    Options      []itemOption      `json:"options"`
+    Associations []itemAssociation `json:"associations"`
 }
 
 func main() {
@@ -51,26 +60,48 @@ func main() {
 
     baseDomain := "cafetariabienvenue.12waiter.eu"
 
-    collector := colly.NewCollector(
+    navigator := colly.NewCollector(
         colly.AllowedDomains(baseDomain),
+        colly.CacheDir(fmt.Sprintf("./%s_cache", baseDomain)),
+        colly.Async(true),
     )
 
-    extensions.RandomUserAgent(collector)
+    extensions.RandomUserAgent(navigator)
+
+    dataCollector := navigator.Clone()
+
+    extensions.RandomUserAgent(dataCollector)
 
     items := make([]item, 0, 250)
 
-    collector.OnHTML("a.collection-item[href^='/c/']", navigate)
-    collector.OnHTML("a.product-item[href^='/c/'][href*='/p/']", navigate)
+    navigator.OnHTML("a.collection-item[href^='/c/']", func(element *colly.HTMLElement) {
+        link := element.Attr("href")
+        element.Request.Visit(link)
+    })
 
-    collector.OnHTML("div.product-page.product-body", func(element *colly.HTMLElement) {
+    navigator.OnHTML("a.product-item[href^='/c/'][href*='/p/']", func(element *colly.HTMLElement) {
+        productUrl := element.Request.AbsoluteURL(element.Attr("href"))
+        if len(productUrl) > 0 {
+            dataCollector.Visit(productUrl)
+        }
+    })
+
+    dataCollector.OnHTML("div.product-page.product-body", func(element *colly.HTMLElement) {
         collectProductItem(&items, element)
     })
 
-    collector.OnRequest(func(request *colly.Request) {
-        fmt.Println("Visiting", request.URL)
+    navigator.OnRequest(func(request *colly.Request) {
+        fmt.Println("Navigator, visiting:", request.URL)
     })
 
-    collector.Visit(fmt.Sprintf("https://%s", baseDomain))
+    dataCollector.OnRequest(func(request *colly.Request) {
+        fmt.Println("Data collector, visiting:", request.URL)
+    })
+
+    navigator.Visit(fmt.Sprintf("https://%s", baseDomain))
+
+    navigator.Wait()
+    dataCollector.Wait()
 
     jsonData, jsonError := json.Marshal(items)
 
@@ -85,10 +116,10 @@ func main() {
     }
 }
 
-func navigate(element *colly.HTMLElement) {
+func collectItemAssociations(element *colly.HTMLElement, currencySymbol string) *[]itemAssociation {
+    associations := make([]itemAssociation, 0, 10)
 
-    link := element.Attr("href")
-    element.Request.Visit(link)
+    return &associations
 }
 
 func collectItemOptions(element *colly.HTMLElement, currencySymbol string) *[]itemOption {
@@ -98,7 +129,7 @@ func collectItemOptions(element *colly.HTMLElement, currencySymbol string) *[]it
 
     options := make([]itemOption, 0, 20)
 
-    optionGroups.Each(func(groupIteration int, optionGroupSelection *goquery.Selection) {
+    optionGroups.EachWithBreak(func(groupIteration int, optionGroupSelection *goquery.Selection) bool {
 
         isOptional := false
 
@@ -110,9 +141,12 @@ func collectItemOptions(element *colly.HTMLElement, currencySymbol string) *[]it
 
         error := handleOptionsGroup(&options, optionGroupSelection, currencySymbol, isOptional)
 
-        if error != nil {
-            fmt.Println(error)
+        if error == nil {
+            return true
         }
+
+        fmt.Println(error)
+        return false
     })
 
     return &options
@@ -139,17 +173,18 @@ func handleOptionsGroup(
         return fmt.Errorf("option group identifier is empty")
     }
 
-    optionElements.Each(func(i int, optionSelection *goquery.Selection) {
+    optionElements.EachWithBreak(func(i int, optionSelection *goquery.Selection) bool {
 
         option, error := constructItemOption(
             groupId, isOptional, currencySymbol, optionSelection)
 
         if error != nil {
             fmt.Println(error)
-            return
+            return false
         }
 
         *options = append(*options, *option)
+        return true
     })
 
     return nil
@@ -247,6 +282,10 @@ func collectProductItem(items *[]item, element *colly.HTMLElement) {
         return
     }
 
+    options := collectItemOptions(element, currencySymbol)
+
+    associations := collectItemAssociations(element, currencySymbol)
+
     item := item{
         Slug:        element.ChildAttr("input[id=\"Editor_Slug\"]", "value"),
         Name:        element.ChildText("div.product-section.product-intro h1"),
@@ -256,7 +295,8 @@ func collectProductItem(items *[]item, element *colly.HTMLElement) {
             CurrencySymbol: currencySymbol,
             Value:          itemPrice,
         },
-        Options: *collectItemOptions(element, currencySymbol),
+        Options:      *options,
+        Associations: *associations,
     }
 
     *items = append(*items, item)
