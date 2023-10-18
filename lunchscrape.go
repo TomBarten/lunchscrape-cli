@@ -93,7 +93,8 @@ func navigate(element *colly.HTMLElement) {
 
 func collectItemOptions(element *colly.HTMLElement, currencySymbol string) *[]itemOption {
 
-    optionGroups := element.DOM.Find("form#product-form div.product-section.product-section-input fieldset.product-option-group")
+    optionGroups := element.DOM.Find(
+        "form#product-form div.product-section.product-section-input fieldset.product-option-group")
 
     options := make([]itemOption, 0, 20)
 
@@ -117,12 +118,16 @@ func collectItemOptions(element *colly.HTMLElement, currencySymbol string) *[]it
     return &options
 }
 
-func handleOptionsGroup(options *[]itemOption, optionGroupSelection *goquery.Selection, currencySymbol string, isOptional bool) error {
+func handleOptionsGroup(
+    options *[]itemOption,
+    optionGroupSelection *goquery.Selection,
+    currencySymbol string,
+    isOptional bool) error {
 
     optionElements := optionGroupSelection.Find(
         "div.product-option-group-options.form-checks div.product-option.form-check")
 
-    optionGroupIdInputs := optionGroupSelection.ChildrenFiltered(":input[id$=\"__Id\"]")
+    optionGroupIdInputs := optionGroupSelection.ChildrenFiltered(":input[id$=\"__Id\"][type=hidden]")
 
     if len(optionGroupIdInputs.Nodes) <= 0 {
         return fmt.Errorf("cannot find option group identifier element")
@@ -164,6 +169,18 @@ func constructItemOption(
         isMutuallyExclusive = false
     }
 
+    optionIdInputs := optionSelection.ChildrenFiltered(":input[id$=\"__Id\"][type=hidden]")
+
+    if len(optionIdInputs.Nodes) <= 0 {
+        return nil, fmt.Errorf("cannot find option identifier element")
+    }
+
+    optionId := optionIdInputs.First().AttrOr("value", "")
+
+    if len(optionId) <= 0 {
+        return nil, fmt.Errorf("option identifier is empty")
+    }
+
     optionLabel := optionSelection.Find("label.form-check-label")
 
     rawOptionPrice := optionLabel.Find("span.product-option-price").Text()
@@ -193,6 +210,7 @@ func constructItemOption(
     }
 
     option := itemOption{
+        Id:                  optionId,
         GroupId:             groupId,
         Name:                strings.TrimSpace(optionLabel.Contents().Not("span").Text()),
         IsOptional:          isOptional,
@@ -208,7 +226,8 @@ func constructItemOption(
 
 func collectProductItem(items *[]item, element *colly.HTMLElement) {
 
-    rawItemPrice := element.ChildText("form#product-form fieldset.product-offer div.product-price-measurement div.product-price")
+    rawItemPrice := element.ChildText(
+        "form#product-form fieldset.product-offer div.product-price-measurement div.product-price")
 
     itemPriceParts := strings.Fields(rawItemPrice)
 
@@ -228,10 +247,8 @@ func collectProductItem(items *[]item, element *colly.HTMLElement) {
         return
     }
 
-    options := collectItemOptions(element, currencySymbol)
-
     item := item{
-        Slug:        element.ChildAttr("div.dialog-body.product-body input#Editor_Slug", "value"),
+        Slug:        element.ChildAttr("input[id=\"Editor_Slug\"]", "value"),
         Name:        element.ChildText("div.product-section.product-intro h1"),
         Description: element.ChildText("div.product-section.product-intro p"),
         ImgUrl:      element.ChildAttr("div.product-image-default img", "src"),
@@ -239,7 +256,7 @@ func collectProductItem(items *[]item, element *colly.HTMLElement) {
             CurrencySymbol: currencySymbol,
             Value:          itemPrice,
         },
-        Options: *options,
+        Options: *collectItemOptions(element, currencySymbol),
     }
 
     *items = append(*items, item)
