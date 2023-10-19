@@ -15,11 +15,13 @@ type ItemOption struct {
 }
 
 type ItemAssociation struct {
-    Id         string   `json:"id"`
-    Name       string   `json:"name"`
-    Price      Currency `json:"price"`
-    GroupId    string   `json:"option-group-id"`
-    IsOptional bool     `json:"optional"`
+    Id              string   `json:"id"`
+    Name            string   `json:"name"`
+    Description     string   `json:"description"`
+    Price           Currency `json:"price"`
+    GroupId         string   `json:"association-group-id"`
+    IsAlwaysChecked bool     `json:"always-checked"`
+    IsOptional      bool     `json:"optional"`
 }
 
 type Item struct {

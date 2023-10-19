@@ -37,10 +37,10 @@ func CollectItem(items *[]models.Item, element *colly.HTMLElement) {
     associations := collectItemAssociations(element, currencySymbol)
 
     item := models.Item{
-        Slug:        element.ChildAttr("input[id=\"Editor_Slug\"]", "value"),
-        Name:        element.ChildText("div.product-section.product-intro h1"),
-        Description: element.ChildText("div.product-section.product-intro p"),
-        ImgUrl:      element.ChildAttr("div.product-image-default img", "src"),
+        Slug:        strings.TrimSpace(element.ChildAttr("input[id=\"Editor_Slug\"]", "value")),
+        Name:        strings.TrimSpace(element.ChildText("div.product-section.product-intro h1")),
+        Description: strings.TrimSpace(element.ChildText("div.product-section.product-intro p")),
+        ImgUrl:      strings.TrimSpace(element.ChildAttr("div.product-image-default img", "src")),
         Price: models.Currency{
             CurrencySymbol: currencySymbol,
             Value:          itemPrice,

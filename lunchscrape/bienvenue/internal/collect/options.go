@@ -15,19 +15,24 @@ func collectItemOptions(element *colly.HTMLElement, currencySymbol string) *[]mo
     optionGroups := element.DOM.Find(
         "form#product-form div.product-section.product-section-input fieldset.product-option-group")
 
+    if len(optionGroups.Nodes) <= 0 {
+        empty := make([]models.ItemOption, 0)
+        return &empty
+    }
+
     options := make([]models.ItemOption, 0, 20)
 
-    optionGroups.EachWithBreak(func(groupIteration int, optionGroupSelection *goquery.Selection) bool {
+    optionGroups.EachWithBreak(func(groupIteration int, groupSelection *goquery.Selection) bool {
 
         isOptional := false
 
-        optionalSpan := optionGroupSelection.Find("legend span.badge.control-optional")
+        optionalSpan := groupSelection.Find("legend span.badge.control-optional")
 
         if optionalSpan != nil && len(optionalSpan.Nodes) > 0 {
             isOptional = true
         }
 
-        error := handleOptionsGroup(&options, optionGroupSelection, currencySymbol, isOptional)
+        error := handleOptionsGroup(&options, groupSelection, currencySymbol, isOptional)
 
         if error == nil {
             return true
@@ -116,7 +121,7 @@ func constructItemOption(
         optionPriceParts := strings.Fields(rawOptionPrice)
 
         if len(optionPriceParts) != 3 {
-            return nil, fmt.Errorf("invalid item price format: %s", rawOptionPrice)
+            return nil, fmt.Errorf("invalid option price format: %s", rawOptionPrice)
         }
 
         currencySymbol = optionPriceParts[1]
