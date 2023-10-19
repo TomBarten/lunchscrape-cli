@@ -1,4 +1,4 @@
-module github.com/TomBarten/lunchscrape-cli
+module github.com/TomBarten/lunchscrape_cli
 
 go 1.21.3
 
