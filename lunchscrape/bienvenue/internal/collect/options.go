@@ -1,4 +1,4 @@
-package bienvenue
+package collect
 
 import (
     "fmt"
