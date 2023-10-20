@@ -6,21 +6,22 @@ import (
     "strings"
 
     "github.com/PuerkitoBio/goquery"
-    "github.com/TomBarten/lunchscrape_cli/models"
+    "github.com/TomBarten/lunchscrape_cli/model"
+    "github.com/TomBarten/lunchscrape_cli/model/item"
     "github.com/gocolly/colly"
 )
 
-func collectItemAssociations(element *colly.HTMLElement, currencySymbol string) *[]models.ItemAssociation {
+func collectItemAssociations(element *colly.HTMLElement, currencySymbol string) *[]item.ItemAssociation {
 
     associationGroups := element.DOM.Find(
         "form#product-form div.product-section.product-section-input fieldset.product-association-group")
 
     if len(associationGroups.Nodes) <= 0 {
-        empty := make([]models.ItemAssociation, 0)
+        empty := make([]item.ItemAssociation, 0)
         return &empty
     }
 
-    associations := make([]models.ItemAssociation, 0, 10)
+    associations := make([]item.ItemAssociation, 0, 10)
 
     associationGroups.EachWithBreak(func(groupIteration int, groupSelection *goquery.Selection) bool {
 
@@ -46,7 +47,7 @@ func collectItemAssociations(element *colly.HTMLElement, currencySymbol string) 
 }
 
 func handleAssociationGroup(
-    associations *[]models.ItemAssociation,
+    associations *[]item.ItemAssociation,
     groupSelection *goquery.Selection,
     currencySymbol string,
     isOptional bool) error {
@@ -100,7 +101,7 @@ func constructItemAssociation(
     groupId string,
     isOptional bool,
     currencySymbol string,
-    associationSelection *goquery.Selection) (*models.ItemAssociation, error) {
+    associationSelection *goquery.Selection) (*item.ItemAssociation, error) {
 
     isAlwaysChecked := true
 
@@ -154,14 +155,14 @@ func constructItemAssociation(
         associationPrice = price
     }
 
-    association := models.ItemAssociation{
+    association := item.ItemAssociation{
         Id:              associationId,
         GroupId:         groupId,
         Name:            name,
         Description:     description,
         IsOptional:      isOptional,
         IsAlwaysChecked: isAlwaysChecked,
-        Price: models.Currency{
+        Price: model.Currency{
             Value:          associationPrice,
             CurrencySymbol: currencySymbol,
         },

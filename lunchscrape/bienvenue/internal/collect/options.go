@@ -6,21 +6,22 @@ import (
     "strings"
 
     "github.com/PuerkitoBio/goquery"
-    "github.com/TomBarten/lunchscrape_cli/models"
+    "github.com/TomBarten/lunchscrape_cli/model"
+    "github.com/TomBarten/lunchscrape_cli/model/item"
     "github.com/gocolly/colly"
 )
 
-func collectItemOptions(element *colly.HTMLElement, currencySymbol string) *[]models.ItemOption {
+func collectItemOptions(element *colly.HTMLElement, currencySymbol string) *[]item.ItemOption {
 
     optionGroups := element.DOM.Find(
         "form#product-form div.product-section.product-section-input fieldset.product-option-group")
 
     if len(optionGroups.Nodes) <= 0 {
-        empty := make([]models.ItemOption, 0)
+        empty := make([]item.ItemOption, 0)
         return &empty
     }
 
-    options := make([]models.ItemOption, 0, 20)
+    options := make([]item.ItemOption, 0, 20)
 
     optionGroups.EachWithBreak(func(groupIteration int, groupSelection *goquery.Selection) bool {
 
@@ -46,7 +47,7 @@ func collectItemOptions(element *colly.HTMLElement, currencySymbol string) *[]mo
 }
 
 func handleOptionsGroup(
-    options *[]models.ItemOption,
+    options *[]item.ItemOption,
     optionGroupSelection *goquery.Selection,
     currencySymbol string,
     isOptional bool) error {
@@ -87,7 +88,7 @@ func constructItemOption(
     groupId string,
     isOptional bool,
     currencySymbol string,
-    optionSelection *goquery.Selection) (*models.ItemOption, error) {
+    optionSelection *goquery.Selection) (*item.ItemOption, error) {
 
     isMutuallyExclusive := true
 
@@ -137,13 +138,13 @@ func constructItemOption(
         optionPrice = price
     }
 
-    option := models.ItemOption{
+    option := item.ItemOption{
         Id:                  optionId,
         GroupId:             groupId,
         Name:                strings.TrimSpace(optionLabel.Contents().Not("span").Text()),
         IsOptional:          isOptional,
         IsMutuallyExclusive: isMutuallyExclusive,
-        Price: models.Currency{
+        Price: model.Currency{
             Value:          optionPrice,
             CurrencySymbol: currencySymbol,
         },

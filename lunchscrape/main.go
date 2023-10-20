@@ -11,13 +11,13 @@ import (
 func main() {
 
     menuOutputFileName := "menu.json"
-    menuOutputPath := "../out"
+    outputPath := "../output"
 
-    if outputDirError := os.MkdirAll(menuOutputPath, 0755); outputDirError != nil {
+    if outputDirError := os.MkdirAll(outputPath, 0755); outputDirError != nil {
         fmt.Println("Error creating directory:", outputDirError)
     }
 
-    if outputDirError := os.Chdir(menuOutputPath); outputDirError != nil {
+    if outputDirError := os.Chdir(outputPath); outputDirError != nil {
         fmt.Println("Error changing working directory:", outputDirError)
         return
     }

@@ -4,13 +4,13 @@ import (
     "fmt"
 
     "github.com/TomBarten/lunchscrape_cli/bienvenue/internal/collect"
-    "github.com/TomBarten/lunchscrape_cli/models"
+    "github.com/TomBarten/lunchscrape_cli/model/item"
     "github.com/TomBarten/lunchscrape_cli/utils"
     "github.com/gocolly/colly"
     "github.com/gocolly/colly/extensions"
 )
 
-func Scrape() *[]models.Item {
+func Scrape() *[]item.Item {
 
     baseDomain := "cafetariabienvenue.12waiter.eu"
 
@@ -20,7 +20,7 @@ func Scrape() *[]models.Item {
 
     extensions.RandomUserAgent(dataCollector)
 
-    items := make([]models.Item, 0, 250)
+    items := make([]item.Item, 0, 250)
 
     navigator.OnHTML("a.collection-item[href^='/c/']", func(element *colly.HTMLElement) {
         link := element.Attr("href")

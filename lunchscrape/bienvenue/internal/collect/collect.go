@@ -5,11 +5,12 @@ import (
     "strconv"
     "strings"
 
-    "github.com/TomBarten/lunchscrape_cli/models"
+    "github.com/TomBarten/lunchscrape_cli/model"
+    "github.com/TomBarten/lunchscrape_cli/model/item"
     "github.com/gocolly/colly"
 )
 
-func CollectItem(items *[]models.Item, element *colly.HTMLElement) {
+func CollectItem(items *[]item.Item, element *colly.HTMLElement) {
 
     rawItemPrice := element.ChildText(
         "form#product-form fieldset.product-offer div.product-price-measurement div.product-price")
@@ -36,12 +37,13 @@ func CollectItem(items *[]models.Item, element *colly.HTMLElement) {
 
     associations := collectItemAssociations(element, currencySymbol)
 
-    item := models.Item{
+    item := item.Item{
         Slug:        strings.TrimSpace(element.ChildAttr("input[id=\"Editor_Slug\"]", "value")),
         Name:        strings.TrimSpace(element.ChildText("div.product-section.product-intro h1")),
         Description: strings.TrimSpace(element.ChildText("div.product-section.product-intro p")),
         ImgUrl:      strings.TrimSpace(element.ChildAttr("div.product-image-default img", "src")),
-        Price: models.Currency{
+        ItemUrl:     strings.TrimSpace(element.Request.URL.String()),
+        Price: model.Currency{
             CurrencySymbol: currencySymbol,
             Value:          itemPrice,
         },
