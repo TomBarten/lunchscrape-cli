@@ -6,9 +6,12 @@ import (
     "os"
 
     "github.com/TomBarten/lunchscrape_cli/bienvenue"
+    "github.com/TomBarten/lunchscrape_cli/cmd"
 )
 
 func main() {
+
+    cmd.Execute()
 
     menuOutputFileName := "menu.json"
     outputPath := "../output"
