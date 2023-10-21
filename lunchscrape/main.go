@@ -5,8 +5,8 @@ import (
     "fmt"
     "os"
 
-    "github.com/TomBarten/lunchscrape_cli/bienvenue"
     "github.com/TomBarten/lunchscrape_cli/cmd"
+    "github.com/TomBarten/lunchscrape_cli/modules/bienvenue"
 )
 
 func main() {
@@ -25,7 +25,9 @@ func main() {
         return
     }
 
-    items := bienvenue.Scrape()
+    return
+
+    items := bienvenue.Module{}.Scrape()
 
     jsonData, jsonError := json.Marshal(items)
 

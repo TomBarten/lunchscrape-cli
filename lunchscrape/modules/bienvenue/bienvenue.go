@@ -3,14 +3,16 @@ package bienvenue
 import (
     "fmt"
 
-    "github.com/TomBarten/lunchscrape_cli/bienvenue/internal/collect"
     "github.com/TomBarten/lunchscrape_cli/model/item"
+    "github.com/TomBarten/lunchscrape_cli/modules/bienvenue/internal/collect"
     "github.com/TomBarten/lunchscrape_cli/utils"
     "github.com/gocolly/colly"
     "github.com/gocolly/colly/extensions"
 )
 
-func Scrape() *[]item.Item {
+type Module struct{}
+
+func (m Module) Scrape() *[]item.Item {
 
     baseDomain := "cafetariabienvenue.12waiter.eu"
 
